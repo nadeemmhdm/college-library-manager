@@ -10,7 +10,6 @@ dist/
 dist-electron/
 release/
 .cache/
-build/
 
 # Local databases, encryption keys & persistence
 *.db
