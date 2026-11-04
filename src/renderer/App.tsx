@@ -286,59 +286,53 @@ export const App: React.FC = () => {
       >
         <div>
           {/* College Branding Sidebar Header with Collapse Toggle */}
-          <div
-            className={`p-3.5 border-b border-slate-800 flex items-center ${
-              isSidebarCollapsed ? 'justify-center' : 'justify-between'
-            }`}
-          >
-            <div className={`flex items-center space-x-3 overflow-hidden ${isSidebarCollapsed ? 'hidden' : 'flex'}`}>
-              {college?.logoDataUrl ? (
-                <img
-                  src={college.logoDataUrl}
-                  alt="Logo"
-                  className="w-9 h-9 object-contain rounded-xl bg-slate-950 p-1 border border-slate-800 flex-shrink-0"
-                />
-              ) : (
-                <img
-                  src="./logo.svg"
-                  alt="Logo"
-                  className="w-9 h-9 object-contain rounded-xl bg-slate-950 p-0.5 border border-slate-800 flex-shrink-0 shadow-lg shadow-blue-500/10"
-                />
-              )}
-              <div className="truncate">
-                <div className="font-bold text-white text-xs truncate">{college?.name || 'College Library'}</div>
-                <div className="text-[10px] text-slate-400 truncate">{college?.libraryName || 'Central Library'}</div>
+          <div className="p-3 border-b border-slate-800 flex items-center justify-center">
+            {isSidebarCollapsed ? (
+              <div className="w-full flex flex-col items-center py-1 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  title="Expand Navigation (Click to expand)"
+                  className="group relative p-0.5 rounded-2xl transition hover:ring-2 hover:ring-blue-500/50 active:scale-95"
+                >
+                  <img
+                    src={college?.logoDataUrl || './logo.png'}
+                    alt="Logo"
+                    className="w-11 h-11 object-contain rounded-xl bg-slate-950 p-1 border border-slate-800 shadow-md group-hover:scale-105 transition"
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  title="Expand Sidebar"
+                  className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition active:scale-90"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
-            </div>
-
-            {/* In collapsed mode, show only the logo */}
-            {isSidebarCollapsed && (
-              <div className="flex flex-col items-center">
-                {college?.logoDataUrl ? (
+            ) : (
+              <div className="w-full flex items-center justify-between">
+                <div className="flex items-center space-x-3 overflow-hidden">
                   <img
-                    src={college.logoDataUrl}
+                    src={college?.logoDataUrl || './logo.png'}
                     alt="Logo"
-                    className="w-9 h-9 object-contain rounded-xl bg-slate-950 p-1 border border-slate-800 shadow-md"
+                    className="w-10 h-10 object-contain rounded-xl bg-slate-950 p-1 border border-slate-800 shadow-md flex-shrink-0"
                   />
-                ) : (
-                  <img
-                    src="./logo.svg"
-                    alt="Logo"
-                    className="w-9 h-9 object-contain rounded-xl bg-slate-950 p-0.5 border border-slate-800 shadow-md"
-                  />
-                )}
+                  <div className="truncate">
+                    <div className="font-bold text-white text-xs truncate">{college?.name || 'College Library'}</div>
+                    <div className="text-[10px] text-slate-400 truncate">{college?.libraryName || 'Central Library'}</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarCollapsed(true)}
+                  title="Collapse Sidebar"
+                  className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition active:scale-90 flex-shrink-0"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
               </div>
             )}
-
-            {/* Collapse/Expand Toggle Button */}
-            <button
-              type="button"
-              onClick={() => setIsSidebarCollapsed(prev => !prev)}
-              title={isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition active:scale-90"
-            >
-              {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-            </button>
           </div>
 
           {/* Navigation Items List */}
