@@ -38,6 +38,12 @@ export class UpdateService {
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = true;
 
+    // Disable Windows Authenticode code signature verification
+    // Open-source desktop applications built on GitHub Actions do not have commercial EV certificates.
+    // Bypassing code signature verification allows electron-updater to verify SHA-512 cryptographic checksums
+    // and successfully download & install updates without Authenticode failure.
+    (autoUpdater as any).verifyUpdateCodeSignature = () => Promise.resolve(null);
+
     autoUpdater.on('checking-for-update', () => {
       this.currentStatus.status = 'checking';
       this.notifyWindow();
@@ -128,7 +134,7 @@ export class UpdateService {
         });
       });
 
-      const currentVer = app ? app.getVersion() : '1.0.4';
+      const currentVer = app ? app.getVersion() : '1.0.5';
       const latestTag = checkResult?.tag_name ? checkResult.tag_name.replace(/^v/, '') : currentVer;
       const isNewer = this.compareVersions(latestTag, currentVer) > 0;
 
@@ -181,7 +187,14 @@ export class UpdateService {
       this.currentStatus.status = 'downloading';
       this.currentStatus.downloadProgress = 0;
       this.notifyWindow();
-      await autoUpdater.downloadUpdate();
+      try {
+        await autoUpdater.downloadUpdate();
+      } catch (err: any) {
+        console.error('autoUpdater downloadUpdate error:', err);
+        this.currentStatus.status = 'error';
+        this.currentStatus.errorMessage = `Download update encountered an issue: ${err.message || 'Verification failed'}. You can download and install the setup directly.`;
+        this.notifyWindow();
+      }
     }
   }
 

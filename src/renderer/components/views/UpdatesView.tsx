@@ -14,7 +14,7 @@ import { UpdateInfo } from '../../../shared/types';
 
 export const UpdatesView: React.FC = () => {
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo>({
-    currentVersion: '1.0.4',
+    currentVersion: '1.0.5',
     updateAvailable: false,
     status: 'idle',
   });
@@ -30,7 +30,9 @@ export const UpdatesView: React.FC = () => {
       setChecking(status.status === 'checking');
     });
 
-    return () => cleanup();
+    return () => {
+      cleanup();
+    };
   }, []);
 
   const handleCheck = async () => {
@@ -56,6 +58,12 @@ export const UpdatesView: React.FC = () => {
 
   const openGitHubReleases = () => {
     window.electronAPI.openExternalUrl('https://github.com/nadeemmhdm/college-library-manager/releases');
+  };
+
+  const openDirectDownload = () => {
+    window.electronAPI.openExternalUrl(
+      'https://github.com/nadeemmhdm/college-library-manager/releases/latest/download/CollegeLibraryManager-Setup-x64.exe'
+    );
   };
 
   return (
@@ -174,7 +182,7 @@ export const UpdatesView: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={openGitHubReleases}
+                    onClick={openDirectDownload}
                     className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold active:scale-95 transition"
                   >
                     Direct Download

@@ -132,7 +132,9 @@ const electronAPI = {
   onUpdateStatusChanged: (callback: (status: UpdateInfo) => void) => {
     const sub = (_: any, status: UpdateInfo) => callback(status);
     ipcRenderer.on('update-status-changed', sub);
-    return () => ipcRenderer.removeListener('update-status-changed', sub);
+    return () => {
+      ipcRenderer.removeListener('update-status-changed', sub);
+    };
   },
 
   // System

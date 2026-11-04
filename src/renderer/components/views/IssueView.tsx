@@ -145,8 +145,9 @@ export const IssueView: React.FC<IssueViewProps> = ({
         // Collect copies from matching books
         const allCopies: BookCopy[] = [];
         for (const b of books.slice(0, 3)) {
-          const copies = await window.electronAPI.getBookCopies(b.id);
-          const available = copies.filter(c => c.status === 'available');
+          const res = await window.electronAPI.getBookById(b.id);
+          const copies: BookCopy[] = res?.copies || [];
+          const available = copies.filter((c: BookCopy) => c.status === 'available');
           allCopies.push(...available);
         }
 
@@ -198,11 +199,11 @@ export const IssueView: React.FC<IssueViewProps> = ({
         setSuccessTransaction(res.transaction);
         // Refresh borrower data active count
         if (borrowerType === 'student') {
-          const updated = await window.electronAPI.findStudent(borrowerId);
-          if (updated) setBorrowerData(updated);
+          const list = await window.electronAPI.getStudents({ search: borrowerId });
+          if (list.length > 0) setBorrowerData(list[0]);
         } else {
-          const updated = await window.electronAPI.findTeacher(borrowerId);
-          if (updated) setBorrowerData(updated);
+          const list = await window.electronAPI.getTeachers({ search: borrowerId });
+          if (list.length > 0) setBorrowerData(list[0]);
         }
         // Reset copy form
         setCopyData(null);
