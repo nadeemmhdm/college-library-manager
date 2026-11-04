@@ -137,6 +137,7 @@ const electronAPI = {
 
   // System
   openFolder: (folderPath: string) => ipcRenderer.invoke('system:openFolder', folderPath),
+  openExternalUrl: (url: string) => ipcRenderer.invoke('system:openExternal', url),
   getAppInfo: () => ipcRenderer.invoke('system:getAppInfo'),
   openImageDialog: () => ipcRenderer.invoke('dialog:openImage'),
 };

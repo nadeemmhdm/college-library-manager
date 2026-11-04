@@ -14,23 +14,39 @@ import {
   Mail,
   UserCheck,
   Edit3,
+  Layers,
+  BookOpen,
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { Student, CollegeProfile } from '../../../shared/types';
 import { printStudentLibraryCard } from '../../utils/printUtils';
+import { DepartmentManagerModal } from '../common/DepartmentManagerModal';
 
 interface StudentsViewProps {
   college: CollegeProfile | null;
+  onNavigateToIssue?: (student: Student) => void;
 }
 
-export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
+export const StudentsView: React.FC<StudentsViewProps> = ({ college, onNavigateToIssue }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState('');
   const [department, setDepartment] = useState('all');
   const [status, setStatus] = useState<'active' | 'archived' | 'all'>('active');
   const [loading, setLoading] = useState(true);
 
-  // Modal
+  // Departments
+  const [departmentsList, setDepartmentsList] = useState<string[]>([
+    'Computer Science',
+    'Information Technology',
+    'Electronics Engineering',
+    'Mechanical Engineering',
+    'Civil Engineering',
+    'Commerce',
+    'Sciences & Humanities',
+  ]);
+  const [showDeptModal, setShowDeptModal] = useState(false);
+
+  // Modals
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -45,6 +61,16 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
     email: '',
   });
 
+  // Load configured departments
+  const loadDepartments = async () => {
+    try {
+      const cfg = await window.electronAPI.getLibraryConfig();
+      if (cfg && cfg.departments && cfg.departments.length > 0) {
+        setDepartmentsList(cfg.departments);
+      }
+    } catch (e) {}
+  };
+
   const loadStudents = async () => {
     setLoading(true);
     try {
@@ -57,8 +83,23 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
   };
 
   useEffect(() => {
+    loadDepartments();
+  }, []);
+
+  useEffect(() => {
     loadStudents();
   }, [search, department, status]);
+
+  // Strip prefix for input display
+  const stripCountryCode = (val: string) => {
+    if (!val) return '';
+    return val.replace(/^\+91[\s-]*/, '').replace(/\D/g, '').slice(0, 10);
+  };
+
+  const formatWithCountryCode = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 10);
+    return digits ? `+91 ${digits}` : '';
+  };
 
   const handleCreateStudent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +117,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
         setNewStudent({
           admissionNumber: '',
           fullName: '',
-          department: 'Computer Science',
+          department: departmentsList[0] || 'Computer Science',
           academicYear: '2026-2027',
           semester: '1st Semester',
           phone: '',
@@ -131,7 +172,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
         const rows = results.data.map((r: any) => ({
           admissionNumber: r.AdmissionNo || r.admissionNumber || '',
           fullName: r.Name || r.fullName || '',
-          department: r.Department || r.department || 'General',
+          department: r.Department || r.department || (departmentsList[0] || 'General'),
           academicYear: r.AcademicYear || r.academicYear || '2026-2027',
           semester: r.Semester || r.semester || '1st Semester',
           phone: r.Phone || r.phone || '',
@@ -171,16 +212,6 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
     a.click();
   };
 
-  const departments = [
-    'all',
-    'Computer Science',
-    'Information Technology',
-    'Electronics Engineering',
-    'Mechanical Engineering',
-    'Civil Engineering',
-    'Sciences & Humanities',
-  ];
-
   return (
     <div className="space-y-6">
       {/* Top Action Bar */}
@@ -204,17 +235,28 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
               onChange={e => setDepartment(e.target.value)}
               className="bg-transparent text-xs text-white focus:outline-none"
             >
-              {departments.map(d => (
+              <option value="all" className="bg-slate-900">All Departments</option>
+              {departmentsList.map(d => (
                 <option key={d} value={d} className="bg-slate-900">
-                  {d === 'all' ? 'All Departments' : d}
+                  {d}
                 </option>
               ))}
             </select>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowDeptModal(true)}
+            title="Manage Academic Departments"
+            className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold flex items-center space-x-1.5 border border-slate-800 active:scale-95 transition"
+          >
+            <Layers className="w-3.5 h-3.5 text-blue-400" />
+            <span>Departments</span>
+          </button>
         </div>
 
         <div className="flex items-center space-x-2">
-          <label className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold flex items-center space-x-1.5 border border-slate-800 cursor-pointer transition">
+          <label className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold flex items-center space-x-1.5 border border-slate-800 cursor-pointer active:scale-95 transition">
             <Upload className="w-3.5 h-3.5" />
             <span>Import CSV</span>
             <input type="file" accept=".csv" onChange={handleCsvImport} className="hidden" />
@@ -223,7 +265,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
           <button
             type="button"
             onClick={handleCsvExport}
-            className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold flex items-center space-x-1.5 border border-slate-800 transition"
+            className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold flex items-center space-x-1.5 border border-slate-800 active:scale-95 transition"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export CSV</span>
@@ -231,8 +273,13 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
 
           <button
             type="button"
-            onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center space-x-1.5 shadow-lg shadow-blue-600/20 transition"
+            onClick={() => {
+              if (departmentsList.length > 0 && !newStudent.department) {
+                setNewStudent(prev => ({ ...prev, department: departmentsList[0] }));
+              }
+              setShowAddModal(true);
+            }}
+            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center space-x-1.5 shadow-lg shadow-blue-600/20 active:scale-95 transition"
           >
             <Plus className="w-4 h-4" />
             <span>Add Student</span>
@@ -250,7 +297,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
                 <th className="py-3 px-4">Admission No</th>
                 <th className="py-3 px-4">Department</th>
                 <th className="py-3 px-4">Academic Year & Sem</th>
-                <th className="py-3 px-4">Contact</th>
+                <th className="py-3 px-4">Contact (+91)</th>
                 <th className="py-3 px-4 text-center">Active Issues</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
@@ -269,7 +316,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
                       {s.phone && (
                         <div className="flex items-center space-x-1 text-[11px]">
                           <Phone className="w-3 h-3 text-slate-500" />
-                          <span>{s.phone}</span>
+                          <span className="font-mono">{s.phone}</span>
                         </div>
                       )}
                       {s.email && (
@@ -292,11 +339,22 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
+                        {onNavigateToIssue && (
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToIssue(s)}
+                            title="Issue Book to this student"
+                            className="px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white font-semibold text-[11px] flex items-center space-x-1 active:scale-95 transition"
+                          >
+                            <BookOpen className="w-3 h-3" />
+                            <span>Issue Book</span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => printStudentLibraryCard(s, college)}
                           title="Print Library Card"
-                          className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-[11px] flex items-center space-x-1"
+                          className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-[11px] flex items-center space-x-1 active:scale-95 transition"
                         >
                           <Printer className="w-3 h-3 text-blue-400" />
                           <span>ID Card</span>
@@ -308,7 +366,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
                             setModalError(null);
                           }}
                           title="Edit Student"
-                          className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-blue-400 transition"
+                          className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-blue-400 transition active:scale-95"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
@@ -317,7 +375,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
                             type="button"
                             onClick={() => handleArchive(s.id)}
                             title="Archive Student"
-                            className="p-1 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition"
+                            className="p-1 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition active:scale-95"
                           >
                             <Archive className="w-3.5 h-3.5" />
                           </button>
@@ -341,8 +399,8 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
       {/* ADD STUDENT MODAL */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-lg w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+          <div className="max-w-lg w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
               <div className="flex items-center space-x-2">
                 <GraduationCap className="w-5 h-5 text-blue-500" />
                 <h3 className="text-base font-bold text-white">Register Student</h3>
@@ -350,13 +408,13 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white"
+                className="p-1 rounded-lg text-slate-400 hover:text-white transition active:scale-95"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateStudent} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleCreateStudent} className="p-6 space-y-4 text-xs overflow-y-auto max-h-[80vh]">
               {modalError && (
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center space-x-2">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -372,7 +430,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
                   placeholder="e.g. Alex Morgan"
                   value={newStudent.fullName}
                   onChange={e => setNewStudent({ ...newStudent, fullName: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -384,19 +442,29 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
                   placeholder="e.g. ADM-2026-0042"
                   value={newStudent.admissionNumber}
                   onChange={e => setNewStudent({ ...newStudent, admissionNumber: e.target.value.toUpperCase() })}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono focus:outline-none focus:border-blue-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Department</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-semibold text-slate-300">Department</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowDeptModal(true)}
+                      className="text-[10px] text-blue-400 hover:underline flex items-center space-x-0.5"
+                    >
+                      <Plus className="w-2.5 h-2.5" />
+                      <span>Manage</span>
+                    </button>
+                  </div>
                   <select
                     value={newStudent.department}
                     onChange={e => setNewStudent({ ...newStudent, department: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   >
-                    {departments.filter(d => d !== 'all').map(d => (
+                    {departmentsList.map(d => (
                       <option key={d} value={d}>
                         {d}
                       </option>
@@ -410,7 +478,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
                     type="text"
                     value={newStudent.academicYear}
                     onChange={e => setNewStudent({ ...newStudent, academicYear: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -422,19 +490,28 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
                     type="text"
                     value={newStudent.semester}
                     onChange={e => setNewStudent({ ...newStudent, semester: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Phone Number</label>
-                  <input
-                    type="text"
-                    placeholder="+91..."
-                    value={newStudent.phone}
-                    onChange={e => setNewStudent({ ...newStudent, phone: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
-                  />
+                  <label className="block font-semibold text-slate-300 mb-1">Phone Number (India)</label>
+                  <div className="flex rounded-lg overflow-hidden border border-slate-800 bg-slate-950 focus-within:border-blue-500">
+                    <div className="px-2.5 py-2 bg-slate-900 border-r border-slate-800 flex items-center space-x-1 text-slate-300 font-semibold text-xs select-none">
+                      <span className="text-xs">🇮🇳</span>
+                      <span>+91</span>
+                    </div>
+                    <input
+                      type="tel"
+                      maxLength={10}
+                      placeholder="9876543210"
+                      value={stripCountryCode(newStudent.phone)}
+                      onChange={e =>
+                        setNewStudent({ ...newStudent, phone: formatWithCountryCode(e.target.value) })
+                      }
+                      className="flex-1 px-3 py-2 bg-transparent text-white font-mono text-xs focus:outline-none"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -445,7 +522,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
                   placeholder="student@college.edu"
                   value={newStudent.email}
                   onChange={e => setNewStudent({ ...newStudent, email: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -453,13 +530,13 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold active:scale-95 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg shadow-blue-600/20"
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg shadow-blue-600/20 active:scale-95 transition"
                 >
                   Register Student
                 </button>
@@ -472,8 +549,8 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
       {/* EDIT STUDENT MODAL */}
       {editingStudent && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-lg w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+          <div className="max-w-lg w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
               <div className="flex items-center space-x-2">
                 <Edit3 className="w-5 h-5 text-blue-500" />
                 <h3 className="text-base font-bold text-white">Edit Student Details</h3>
@@ -481,13 +558,13 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
               <button
                 type="button"
                 onClick={() => setEditingStudent(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white"
+                className="p-1 rounded-lg text-slate-400 hover:text-white transition active:scale-95"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleUpdateStudent} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleUpdateStudent} className="p-6 space-y-4 text-xs overflow-y-auto max-h-[80vh]">
               {modalError && (
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center space-x-2">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -502,7 +579,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
                   required
                   value={editingStudent.fullName}
                   onChange={e => setEditingStudent({ ...editingStudent, fullName: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -513,19 +590,29 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
                   required
                   value={editingStudent.admissionNumber}
                   onChange={e => setEditingStudent({ ...editingStudent, admissionNumber: e.target.value.toUpperCase() })}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono focus:outline-none focus:border-blue-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Department</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-semibold text-slate-300">Department</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowDeptModal(true)}
+                      className="text-[10px] text-blue-400 hover:underline flex items-center space-x-0.5"
+                    >
+                      <Plus className="w-2.5 h-2.5" />
+                      <span>Manage</span>
+                    </button>
+                  </div>
                   <select
                     value={editingStudent.department}
                     onChange={e => setEditingStudent({ ...editingStudent, department: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   >
-                    {departments.filter(d => d !== 'all').map(d => (
+                    {departmentsList.map(d => (
                       <option key={d} value={d}>
                         {d}
                       </option>
@@ -539,7 +626,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
                     type="text"
                     value={editingStudent.academicYear}
                     onChange={e => setEditingStudent({ ...editingStudent, academicYear: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -551,18 +638,28 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
                     type="text"
                     value={editingStudent.semester}
                     onChange={e => setEditingStudent({ ...editingStudent, semester: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Phone Number</label>
-                  <input
-                    type="text"
-                    value={editingStudent.phone || ''}
-                    onChange={e => setEditingStudent({ ...editingStudent, phone: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
-                  />
+                  <label className="block font-semibold text-slate-300 mb-1">Phone Number (India)</label>
+                  <div className="flex rounded-lg overflow-hidden border border-slate-800 bg-slate-950 focus-within:border-blue-500">
+                    <div className="px-2.5 py-2 bg-slate-900 border-r border-slate-800 flex items-center space-x-1 text-slate-300 font-semibold text-xs select-none">
+                      <span className="text-xs">🇮🇳</span>
+                      <span>+91</span>
+                    </div>
+                    <input
+                      type="tel"
+                      maxLength={10}
+                      placeholder="9876543210"
+                      value={stripCountryCode(editingStudent.phone || '')}
+                      onChange={e =>
+                        setEditingStudent({ ...editingStudent, phone: formatWithCountryCode(e.target.value) })
+                      }
+                      className="flex-1 px-3 py-2 bg-transparent text-white font-mono text-xs focus:outline-none"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -572,7 +669,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
                   type="email"
                   value={editingStudent.email || ''}
                   onChange={e => setEditingStudent({ ...editingStudent, email: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -580,13 +677,13 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
                 <button
                   type="button"
                   onClick={() => setEditingStudent(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold active:scale-95 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg shadow-blue-600/20"
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg shadow-blue-600/20 active:scale-95 transition"
                 >
                   Save Changes
                 </button>
@@ -595,6 +692,14 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ college }) => {
           </div>
         </div>
       )}
+
+      {/* DEPARTMENT MANAGEMENT MODAL */}
+      <DepartmentManagerModal
+        isOpen={showDeptModal}
+        onClose={() => setShowDeptModal(false)}
+        departments={departmentsList}
+        onDepartmentsUpdated={updated => setDepartmentsList(updated)}
+      />
     </div>
   );
 };

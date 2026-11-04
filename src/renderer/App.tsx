@@ -18,15 +18,19 @@ import {
   Bell,
   Sun,
   Moon,
+  Laptop,
   Shield,
   Menu,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
-import { CollegeProfile, AppearanceSettings } from '../shared/types';
+import { CollegeProfile, AppearanceSettings, ThemeMode, BorrowerType } from '../shared/types';
 import { SetupWizard } from './components/setup/SetupWizard';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { LockScreen } from './components/auth/LockScreen';
 import { GlobalSearchModal } from './components/common/GlobalSearchModal';
 import { SplashScreen } from './components/common/SplashScreen';
+import { ThemeSelectorModal } from './components/common/ThemeSelectorModal';
 
 // Views
 import { DashboardView } from './components/views/DashboardView';
@@ -50,6 +54,13 @@ export const App: React.FC = () => {
   const [college, setCollege] = useState<CollegeProfile | null>(null);
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+  const [preselectedBorrower, setPreselectedBorrower] = useState<{
+    type: BorrowerType;
+    data: any;
+  } | null>(null);
+
   const [appearance, setAppearance] = useState<AppearanceSettings>({
     theme: 'light',
     primaryColor: '#2563eb',
@@ -75,6 +86,9 @@ export const App: React.FC = () => {
         if (app) {
           setAppearance(app);
           applyTheme(app);
+          if (app.sidebarAppearance === 'collapsed') {
+            setIsSidebarCollapsed(true);
+          }
         }
         if (session && session.username) {
           setCurrentUser(session);
@@ -98,7 +112,7 @@ export const App: React.FC = () => {
     } else if (app.theme === 'light') {
       root.classList.remove('dark');
     } else {
-      // system
+      // system auto-detect
       if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
         root.classList.add('dark');
       } else {
@@ -106,6 +120,27 @@ export const App: React.FC = () => {
       }
     }
     root.style.setProperty('--primary-color', app.primaryColor);
+  };
+
+  // Real-time listener for Windows OS system theme changes
+  useEffect(() => {
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleSystemThemeChange = () => {
+      if (appearance.theme === 'system') {
+        applyTheme(appearance);
+      }
+    };
+    mql.addEventListener('change', handleSystemThemeChange);
+    return () => mql.removeEventListener('change', handleSystemThemeChange);
+  }, [appearance]);
+
+  const handleSelectTheme = async (theme: ThemeMode) => {
+    const updated = { ...appearance, theme };
+    setAppearance(updated);
+    applyTheme(updated);
+    try {
+      await window.electronAPI.updateAppearance(updated);
+    } catch (e) {}
   };
 
   // Inactivity auto-lock listener
@@ -243,32 +278,71 @@ export const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
-      {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between flex-shrink-0 z-20">
+      {/* Sidebar (Supports Collapsible/Expandable View) */}
+      <aside
+        className={`${
+          isSidebarCollapsed ? 'w-20' : 'w-64'
+        } bg-slate-900 border-r border-slate-800 flex flex-col justify-between flex-shrink-0 z-20 transition-all duration-300 ease-in-out`}
+      >
         <div>
-          {/* College Branding Sidebar Header */}
-          <div className="p-4 border-b border-slate-800 flex items-center space-x-3">
-            {college?.logoDataUrl ? (
-              <img
-                src={college.logoDataUrl}
-                alt="Logo"
-                className="w-10 h-10 object-contain rounded-xl bg-slate-950 p-1 border border-slate-800 flex-shrink-0"
-              />
-            ) : (
-              <img
-                src="./logo.svg"
-                alt="Logo"
-                className="w-10 h-10 object-contain rounded-xl bg-slate-950 p-0.5 border border-slate-800 flex-shrink-0 shadow-lg shadow-blue-500/10"
-              />
-            )}
-            <div className="truncate">
-              <div className="font-bold text-white text-sm truncate">{college?.name || 'College Library'}</div>
-              <div className="text-[11px] text-slate-400 truncate">{college?.libraryName || 'Central Library'}</div>
+          {/* College Branding Sidebar Header with Collapse Toggle */}
+          <div
+            className={`p-3.5 border-b border-slate-800 flex items-center ${
+              isSidebarCollapsed ? 'justify-center' : 'justify-between'
+            }`}
+          >
+            <div className={`flex items-center space-x-3 overflow-hidden ${isSidebarCollapsed ? 'hidden' : 'flex'}`}>
+              {college?.logoDataUrl ? (
+                <img
+                  src={college.logoDataUrl}
+                  alt="Logo"
+                  className="w-9 h-9 object-contain rounded-xl bg-slate-950 p-1 border border-slate-800 flex-shrink-0"
+                />
+              ) : (
+                <img
+                  src="./logo.svg"
+                  alt="Logo"
+                  className="w-9 h-9 object-contain rounded-xl bg-slate-950 p-0.5 border border-slate-800 flex-shrink-0 shadow-lg shadow-blue-500/10"
+                />
+              )}
+              <div className="truncate">
+                <div className="font-bold text-white text-xs truncate">{college?.name || 'College Library'}</div>
+                <div className="text-[10px] text-slate-400 truncate">{college?.libraryName || 'Central Library'}</div>
+              </div>
             </div>
+
+            {/* In collapsed mode, show only the logo */}
+            {isSidebarCollapsed && (
+              <div className="flex flex-col items-center">
+                {college?.logoDataUrl ? (
+                  <img
+                    src={college.logoDataUrl}
+                    alt="Logo"
+                    className="w-9 h-9 object-contain rounded-xl bg-slate-950 p-1 border border-slate-800 shadow-md"
+                  />
+                ) : (
+                  <img
+                    src="./logo.svg"
+                    alt="Logo"
+                    className="w-9 h-9 object-contain rounded-xl bg-slate-950 p-0.5 border border-slate-800 shadow-md"
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Collapse/Expand Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setIsSidebarCollapsed(prev => !prev)}
+              title={isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition active:scale-90"
+            >
+              {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
           </div>
 
-          {/* Nav List */}
-          <nav className="p-3 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)]">
+          {/* Navigation Items List */}
+          <nav className="p-2 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)]">
             {navItems.map(item => {
               const Icon = item.icon;
               const isActive = activeTab === item.key;
@@ -276,15 +350,18 @@ export const App: React.FC = () => {
                 <button
                   key={item.key}
                   type="button"
+                  title={isSidebarCollapsed ? item.label : undefined}
                   onClick={() => setActiveTab(item.key)}
-                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-semibold transition ${
+                  className={`w-full flex items-center ${
+                    isSidebarCollapsed ? 'justify-center px-2' : 'space-x-3 px-3'
+                  } py-2.5 rounded-xl text-xs font-semibold active:scale-95 transition-all duration-150 ${
                     isActive
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
                       : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                   }`}
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
-                  <span className="truncate">{item.label}</span>
+                  {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
                 </button>
               );
             })}
@@ -293,29 +370,52 @@ export const App: React.FC = () => {
 
         {/* Librarian Account Footer */}
         <div className="p-3 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
-          <div className="truncate pr-2">
-            <div className="font-bold text-white text-xs truncate">{currentUser.fullName}</div>
-            <div className="text-[10px] text-slate-400 font-mono">@{currentUser.username}</div>
-            <div className="text-[9px] text-blue-400 font-medium">NM Developers</div>
-          </div>
-          <div className="flex items-center space-x-1">
-            <button
-              type="button"
-              onClick={handleLock}
-              title="Lock Session (Ctrl+L)"
-              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition"
-            >
-              <Lock className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={handleLogout}
-              title="Log Out"
-              className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          {!isSidebarCollapsed ? (
+            <>
+              <div className="truncate pr-2">
+                <div className="font-bold text-white text-xs truncate">{currentUser.fullName}</div>
+                <div className="text-[10px] text-slate-400 font-mono">@{currentUser.username}</div>
+                <div className="text-[9px] text-blue-400 font-medium">NM Developers</div>
+              </div>
+              <div className="flex items-center space-x-1">
+                <button
+                  type="button"
+                  onClick={handleLock}
+                  title="Lock Session (Ctrl+L)"
+                  className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition active:scale-90"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  title="Log Out"
+                  className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition active:scale-90"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="w-full flex flex-col items-center space-y-1">
+              <button
+                type="button"
+                onClick={handleLock}
+                title="Lock Session (Ctrl+L)"
+                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition active:scale-90"
+              >
+                <Lock className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                title="Log Out"
+                className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition active:scale-90"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 
@@ -323,31 +423,61 @@ export const App: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header Bar */}
         <header className="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 flex-shrink-0 z-10">
-          {/* Global Search Bar Trigger */}
-          <button
-            type="button"
-            onClick={() => setIsSearchOpen(true)}
-            className="flex items-center space-x-2 px-3 py-1.5 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl text-xs text-slate-400 max-w-sm w-full transition"
-          >
-            <Search className="w-3.5 h-3.5 text-slate-400" />
-            <span className="flex-1 text-left truncate">Search library catalog & patrons...</span>
-            <kbd className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] font-mono text-slate-400">
-              Ctrl+K
-            </kbd>
-          </button>
+          <div className="flex items-center space-x-3 max-w-sm w-full">
+            {/* Sidebar toggle shortcut in header */}
+            <button
+              type="button"
+              onClick={() => setIsSidebarCollapsed(prev => !prev)}
+              title="Toggle Sidebar"
+              className="p-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition active:scale-95"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
 
-          {/* Right Header Status */}
-          <div className="flex items-center space-x-4">
-            <div className="text-[11px] text-slate-400 hidden md:block">
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
+            {/* Global Search Bar Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(true)}
+              className="flex-1 flex items-center space-x-2 px-3 py-1.5 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl text-xs text-slate-400 transition"
+            >
+              <Search className="w-3.5 h-3.5 text-slate-400" />
+              <span className="flex-1 text-left truncate">Search catalog & patrons...</span>
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] font-mono text-slate-400">
+                Ctrl+K
+              </kbd>
+            </button>
+          </div>
+
+          {/* Right Header Status & Action Controls */}
+          <div className="flex items-center space-x-3">
+            <div className="text-[11px] text-slate-400 hidden md:flex items-center">
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse" />
               <span>Offline Database Connected</span>
             </div>
 
+            {/* Quick Theme Switcher Button */}
+            <button
+              type="button"
+              onClick={() => setIsThemeModalOpen(true)}
+              title={`Active Theme: ${appearance.theme.toUpperCase()} (Click to change)`}
+              className="p-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white transition active:scale-95 flex items-center space-x-1.5"
+            >
+              {appearance.theme === 'dark' ? (
+                <Moon className="w-4 h-4 text-blue-400" />
+              ) : appearance.theme === 'light' ? (
+                <Sun className="w-4 h-4 text-amber-400" />
+              ) : (
+                <Laptop className="w-4 h-4 text-emerald-400" />
+              )}
+              <span className="text-[11px] font-medium hidden sm:inline capitalize">{appearance.theme}</span>
+            </button>
+
+            {/* Settings Navigation */}
             <button
               type="button"
               onClick={() => setActiveTab('settings')}
               title="Settings"
-              className="p-2 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition"
+              className="p-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition active:scale-95"
             >
               <Settings className="w-4 h-4" />
             </button>
@@ -360,9 +490,27 @@ export const App: React.FC = () => {
             <DashboardView college={college} onNavigate={tab => setActiveTab(tab)} />
           )}
           {activeTab === 'books' && <BooksView college={college} />}
-          {activeTab === 'students' && <StudentsView college={college} />}
-          {activeTab === 'teachers' && <TeachersView college={college} />}
-          {activeTab === 'issue' && <IssueView college={college} />}
+          {activeTab === 'students' && (
+            <StudentsView
+              college={college}
+              onNavigateToIssue={student => {
+                setPreselectedBorrower({ type: 'student', data: student });
+                setActiveTab('issue');
+              }}
+            />
+          )}
+          {activeTab === 'teachers' && (
+            <TeachersView
+              college={college}
+              onNavigateToIssue={teacher => {
+                setPreselectedBorrower({ type: 'teacher', data: teacher });
+                setActiveTab('issue');
+              }}
+            />
+          )}
+          {activeTab === 'issue' && (
+            <IssueView college={college} preselectedBorrower={preselectedBorrower} />
+          )}
           {activeTab === 'return' && <ReturnView college={college} />}
           {activeTab === 'reservations' && <ReservationsView />}
           {activeTab === 'fines' && <FinesView college={college} />}
@@ -395,6 +543,14 @@ export const App: React.FC = () => {
         onSelectTeacher={t => {
           setActiveTab('teachers');
         }}
+      />
+
+      {/* Theme Selection Modal */}
+      <ThemeSelectorModal
+        isOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
+        currentTheme={appearance.theme}
+        onSelectTheme={handleSelectTheme}
       />
     </div>
   );

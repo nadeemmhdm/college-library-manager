@@ -12,6 +12,7 @@ import {
   Eye,
   EyeOff,
   FolderOpen,
+  Layers,
 } from 'lucide-react';
 import {
   CollegeProfile,
@@ -19,6 +20,7 @@ import {
   AppearanceSettings,
   AppSettings,
 } from '../../../shared/types';
+import { DepartmentManagerModal } from '../common/DepartmentManagerModal';
 
 interface SettingsViewProps {
   college: CollegeProfile | null;
@@ -69,6 +71,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
+  const [showDeptModal, setShowDeptModal] = useState(false);
 
   // App info
   const [appInfo, setAppInfo] = useState<{
@@ -309,13 +312,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-300 mb-1">Phone Number</label>
-              <input
-                type="text"
-                value={collegeData.phone}
-                onChange={e => setCollegeData({ ...collegeData, phone: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
-              />
+              <label className="block font-semibold text-slate-300 mb-1">Phone Number (India)</label>
+              <div className="flex rounded-lg overflow-hidden border border-slate-800 bg-slate-950 focus-within:border-blue-500">
+                <div className="px-2.5 py-2 bg-slate-900 border-r border-slate-800 flex items-center space-x-1 text-slate-300 font-semibold text-xs select-none">
+                  <span className="text-xs">🇮🇳</span>
+                  <span>+91</span>
+                </div>
+                <input
+                  type="tel"
+                  maxLength={10}
+                  placeholder="9876543210"
+                  value={(collegeData.phone || '').replace(/^\+91[\s-]*/, '').replace(/\D/g, '').slice(0, 10)}
+                  onChange={e => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setCollegeData({ ...collegeData, phone: digits ? `+91 ${digits}` : '' });
+                  }}
+                  className="flex-1 px-3 py-2 bg-transparent text-white font-mono text-xs focus:outline-none"
+                />
+              </div>
             </div>
 
             <div>
@@ -421,10 +435,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
+          <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
+            <div>
+              <div className="font-bold text-white text-xs">Academic Departments</div>
+              <div className="text-[11px] text-slate-400">
+                {(libraryConfig.departments || []).length} departments configured in college catalog.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowDeptModal(true)}
+              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center space-x-1.5 active:scale-95 transition"
+            >
+              <Layers className="w-3.5 h-3.5 text-blue-400" />
+              <span>Manage Departments</span>
+            </button>
+          </div>
+
           <div className="flex justify-end pt-2">
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg shadow-blue-600/20"
+              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg shadow-blue-600/20 active:scale-95 transition"
             >
               Save Circulation Rules
             </button>
@@ -568,13 +599,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               onClick={() => {
                 if (appInfo?.appDataPath) window.electronAPI.openFolder(appInfo.appDataPath);
               }}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold flex items-center space-x-2"
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold flex items-center space-x-2 active:scale-95 transition"
             >
               <FolderOpen className="w-4 h-4 text-blue-400" />
               <span>Open Local AppData Directory</span>
             </button>
           </div>
         </div>
+      )}
+
+      {/* Department Manager Modal */}
+      {libraryConfig && (
+        <DepartmentManagerModal
+          isOpen={showDeptModal}
+          onClose={() => setShowDeptModal(false)}
+          departments={libraryConfig.departments || []}
+          onDepartmentsUpdated={updated =>
+            setLibraryConfig(prev => (prev ? { ...prev, departments: updated } : null))
+          }
+        />
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 {
   "name": "college-library-manager",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Offline-First Windows Desktop Library Management Software for College Libraries",
   "main": "dist-electron/main/main.js",
   "author": "NM Developers",
@@ -70,6 +70,8 @@
     ],
     "win": {
       "icon": "build/icon.ico",
+      "publisherName": "NM Developers",
+      "legalTrademarks": "NM Developers",
       "sign": null,
       "signAndEditExecutable": false,
       "target": [
@@ -95,6 +97,10 @@
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "shortcutName": "College Library Manager",
+      "publisherName": "NM Developers",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
       "deleteAppDataOnUninstall": false,
       "runAfterFinish": true,
       "artifactName": "CollegeLibraryManager-Setup-x64.exe"

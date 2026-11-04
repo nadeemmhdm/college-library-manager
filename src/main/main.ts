@@ -745,6 +745,12 @@ function registerIpcHandlers() {
     shell.openPath(folderPath);
   });
 
+  ipcMain.handle('system:openExternal', (_, targetUrl: string) => {
+    if (typeof targetUrl === 'string' && (targetUrl.startsWith('https://') || targetUrl.startsWith('http://'))) {
+      shell.openExternal(targetUrl);
+    }
+  });
+
   ipcMain.handle('system:getAppInfo', () => ({
     name: 'College Library Manager',
     version: app.getVersion(),

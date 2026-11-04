@@ -368,14 +368,27 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Phone Number</label>
-                  <input
-                    type="text"
-                    placeholder="+91 9876543210"
-                    value={formData.college.phone}
-                    onChange={e => setFormData({ ...formData, college: { ...formData.college, phone: e.target.value } })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                  />
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Phone Number (India)</label>
+                  <div className="flex rounded-lg overflow-hidden border border-slate-800 bg-slate-900 focus-within:border-blue-500">
+                    <div className="px-2.5 py-2 bg-slate-950 border-r border-slate-800 flex items-center space-x-1 text-slate-300 font-semibold text-xs select-none">
+                      <span className="text-xs">🇮🇳</span>
+                      <span>+91</span>
+                    </div>
+                    <input
+                      type="tel"
+                      maxLength={10}
+                      placeholder="9876543210"
+                      value={(formData.college.phone || '').replace(/^\+91[\s-]*/, '').replace(/\D/g, '').slice(0, 10)}
+                      onChange={e => {
+                        const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setFormData({
+                          ...formData,
+                          college: { ...formData.college, phone: digits ? `+91 ${digits}` : '' },
+                        });
+                      }}
+                      className="flex-1 px-3 py-2 bg-transparent text-white font-mono text-xs focus:outline-none"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">District & State</label>
