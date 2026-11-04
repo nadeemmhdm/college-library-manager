@@ -14,7 +14,7 @@ import { UpdateInfo } from '../../../shared/types';
 
 export const UpdatesView: React.FC = () => {
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo>({
-    currentVersion: '1.0.3',
+    currentVersion: '1.0.4',
     updateAvailable: false,
     status: 'idle',
   });

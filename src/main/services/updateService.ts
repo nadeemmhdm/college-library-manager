@@ -128,7 +128,7 @@ export class UpdateService {
         });
       });
 
-      const currentVer = app ? app.getVersion() : '1.0.1';
+      const currentVer = app ? app.getVersion() : '1.0.4';
       const latestTag = checkResult?.tag_name ? checkResult.tag_name.replace(/^v/, '') : currentVer;
       const isNewer = this.compareVersions(latestTag, currentVer) > 0;
 

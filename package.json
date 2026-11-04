@@ -1,6 +1,6 @@
 {
   "name": "college-library-manager",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Offline-First Windows Desktop Library Management Software for College Libraries",
   "main": "dist-electron/main/main.js",
   "author": "NM Developers",
@@ -78,7 +78,6 @@
       "publisherName": "NM Developers",
       "legalTrademarks": "NM Developers",
       "sign": null,
-      "signAndEditExecutable": false,
       "target": [
         {
           "target": "nsis",
