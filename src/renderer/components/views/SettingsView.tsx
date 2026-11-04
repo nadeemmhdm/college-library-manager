@@ -541,12 +541,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {activeTab === 'about' && (
         <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 text-xs shadow-xl">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white text-lg">
-              CLM
-            </div>
+            <img
+              src="./logo.svg"
+              alt="Logo"
+              className="w-12 h-12 object-contain rounded-xl bg-slate-950 p-1 border border-slate-800 shadow-md"
+            />
             <div>
               <div className="font-extrabold text-white text-base">College Library Manager</div>
-              <div className="text-slate-400 text-xs">Version {appInfo?.version || '1.0.0'} &bull; Windows x64 Desktop Application</div>
+              <div className="text-slate-400 text-xs">
+                Version {appInfo?.version || '1.0.0'} &bull; Windows x64 &bull; Developed by <span className="text-white font-bold">NM Developers</span>
+              </div>
             </div>
           </div>
 

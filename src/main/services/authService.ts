@@ -40,17 +40,21 @@ export class AuthService {
 
   // Verify recovery key
   public verifyRecoveryKey(username: string, recoveryKey: string): boolean {
-    const accounts = this.dbService.query<LibrarianAccount>(
+    const accounts = this.dbService.query<any>(
       'SELECT * FROM librarian_account WHERE username = ?',
       [username]
     );
     if (!accounts || accounts.length === 0) return false;
     const acc = accounts[0];
 
-    const cleaned = recoveryKey.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const expected = crypto.createHmac('sha256', acc.recoverySalt).update(cleaned).digest('hex');
+    const recoverySalt = acc.recovery_salt || acc.recoverySalt;
+    const recoveryVerifier = acc.recovery_verifier || acc.recoveryVerifier;
+    if (!recoverySalt || !recoveryVerifier) return false;
 
-    const match = crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(acc.recoveryVerifier, 'hex'));
+    const cleaned = recoveryKey.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const expected = crypto.createHmac('sha256', recoverySalt).update(cleaned).digest('hex');
+
+    const match = crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(recoveryVerifier, 'hex'));
     if (match) {
       this.logAuthActivity('RECOVERY_VERIFIED', `Recovery key verified for user: ${username}`, 'success');
     } else {
@@ -83,7 +87,7 @@ export class AuthService {
 
   // Librarian Login with rate limiting
   public login(username: string, password: string): { success: boolean; error?: string; user?: any } {
-    const accounts = this.dbService.query<LibrarianAccount>(
+    const accounts = this.dbService.query<any>(
       'SELECT * FROM librarian_account WHERE username = ?',
       [username]
     );
@@ -94,10 +98,21 @@ export class AuthService {
     }
 
     const acc = accounts[0];
+    const passwordHash = acc.password_hash || acc.passwordHash;
+    const passwordSalt = acc.password_salt || acc.passwordSalt;
+    const lockedUntilVal = acc.locked_until || acc.lockedUntil;
+    const failedAttemptsVal = acc.failed_login_attempts ?? acc.failedLoginAttempts ?? 0;
+    const userFullName = acc.full_name || acc.fullName || acc.username;
+    const lastLoginAtVal = acc.last_login_at || acc.lastLoginAt;
+
+    if (!passwordHash || !passwordSalt) {
+      this.logAuthActivity('LOGIN_ERROR', `Missing password hash or salt for user: ${username}`, 'error');
+      return { success: false, error: 'Account credentials error. Please reset your password using the recovery key.' };
+    }
 
     // Check account lockout
-    if (acc.lockedUntil) {
-      const lockTime = new Date(acc.lockedUntil).getTime();
+    if (lockedUntilVal) {
+      const lockTime = new Date(lockedUntilVal).getTime();
       if (Date.now() < lockTime) {
         const remainingMinutes = Math.ceil((lockTime - Date.now()) / (60 * 1000));
         return {
@@ -110,11 +125,11 @@ export class AuthService {
       }
     }
 
-    const { hash } = this.hashPassword(password, acc.passwordSalt);
-    const valid = crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(acc.passwordHash, 'hex'));
+    const { hash } = this.hashPassword(password, passwordSalt);
+    const valid = crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(passwordHash, 'hex'));
 
     if (!valid) {
-      const attempts = (acc.failedLoginAttempts || 0) + 1;
+      const attempts = failedAttemptsVal + 1;
       let lockedUntil: string | null = null;
       if (attempts >= 5) {
         // Lock for 15 minutes
@@ -143,7 +158,7 @@ export class AuthService {
 
     this.currentSession = {
       username: acc.username,
-      fullName: acc.fullName,
+      fullName: userFullName,
       loginTime: now,
       isLocked: false,
     };
@@ -153,8 +168,8 @@ export class AuthService {
       success: true,
       user: {
         username: acc.username,
-        fullName: acc.fullName,
-        lastLoginAt: acc.lastLoginAt,
+        fullName: userFullName,
+        lastLoginAt: lastLoginAtVal,
       },
     };
   }

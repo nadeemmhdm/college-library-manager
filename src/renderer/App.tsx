@@ -26,6 +26,7 @@ import { SetupWizard } from './components/setup/SetupWizard';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { LockScreen } from './components/auth/LockScreen';
 import { GlobalSearchModal } from './components/common/GlobalSearchModal';
+import { SplashScreen } from './components/common/SplashScreen';
 
 // Views
 import { DashboardView } from './components/views/DashboardView';
@@ -42,6 +43,7 @@ import { UpdatesView } from './components/views/UpdatesView';
 import { SettingsView } from './components/views/SettingsView';
 
 export const App: React.FC = () => {
+  const [showSplash, setShowSplash] = useState(true);
   const [setupCompleted, setSetupCompleted] = useState<boolean | null>(null);
   const [currentUser, setCurrentUser] = useState<any | null>(null);
   const [isLocked, setIsLocked] = useState(false);
@@ -169,6 +171,11 @@ export const App: React.FC = () => {
     setIsLocked(false);
   };
 
+  // Splash Screen (7 seconds)
+  if (showSplash) {
+    return <SplashScreen onFinished={() => setShowSplash(false)} durationMs={7000} />;
+  }
+
   // Loading state
   if (setupCompleted === null) {
     return (
@@ -289,6 +296,7 @@ export const App: React.FC = () => {
           <div className="truncate pr-2">
             <div className="font-bold text-white text-xs truncate">{currentUser.fullName}</div>
             <div className="text-[10px] text-slate-400 font-mono">@{currentUser.username}</div>
+            <div className="text-[9px] text-blue-400 font-medium">NM Developers</div>
           </div>
           <div className="flex items-center space-x-1">
             <button

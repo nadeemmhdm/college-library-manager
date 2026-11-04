@@ -1,9 +1,9 @@
 {
   "name": "college-library-manager",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Offline-First Windows Desktop Library Management Software for College Libraries",
   "main": "dist-electron/main/main.js",
-  "author": "Antigravity Senior Desktop Engineering Team",
+  "author": "NM Developers",
   "license": "MIT",
   "scripts": {
     "dev": "vite",
@@ -50,9 +50,9 @@
     "wait-on": "^8.0.2"
   },
   "build": {
-    "appId": "com.collegelibrarymanager.app",
+    "appId": "com.nmdevelopers.collegelibrarymanager",
     "productName": "College Library Manager",
-    "copyright": "Copyright © 2026 College Library Management Systems",
+    "copyright": "Copyright © 2026 NM Developers",
     "directories": {
       "output": "release"
     },
@@ -92,7 +92,7 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
+      "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "shortcutName": "College Library Manager",
       "deleteAppDataOnUninstall": false,

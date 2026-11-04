@@ -221,7 +221,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col justify-between text-slate-100 p-6">
+    <div className="h-screen overflow-y-auto bg-slate-900 flex flex-col justify-between text-slate-100 p-6">
       {/* Top Header */}
       <div className="max-w-4xl mx-auto w-full flex items-center justify-between pb-6 border-b border-slate-800">
         <div className="flex items-center space-x-3">
