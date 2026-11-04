@@ -1,0 +1,44 @@
+# Node & Dependencies
+node_modules/
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs & caches
+dist/
+dist-electron/
+release/
+.cache/
+build/
+
+# Local databases, encryption keys & persistence
+*.db
+*.db.enc
+*.db.enc.tmp
+*.bak
+*.key
+master.key
+Database/
+Backups/
+Documents/
+Logs/
+BookCovers/
+Config/
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.pfx
+*.cert
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/*
+!.vscode/extensions.json
+.idea/
